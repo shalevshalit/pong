@@ -9,42 +9,49 @@ export default class WelcomeScreen extends React.Component {
         const { navigate } = this.props.navigation
         const myId = '9f52681b-0001-febd-fe48-06fb834060ef'//guid()
         const players = {
-            [myId]:  {
+            [myId]: {
                 team: 'red',
-            },
-            someone:  {
-                left: 100,
-                team: 'blue',
-            },
-            someone2:  {
-                left: 200,
-                team: 'green',
             }
         }
         firebase.database().ref('games/' + myId).set({
+            id: myId,
             time: new Date(),
-            players
+            players,
         })
 
         navigate('Game', {
             gameId: myId,
-            playerId: myId
+            playerId: myId,
         })
     }
 
-    joinGame(){
+    joinGame() {
+        const { navigate } = this.props.navigation
         firebase.database().ref('games').once('value').then(snapshot => {
-            const allGames = snapshot.val();
-            _.sortBy(allGames, 'time')
+            const myId = guid()
+            const allGames = snapshot.val()
+            const game = _.last(_.sortBy(allGames, 'time'))
+            firebase.database().ref(`games/${game.id}/players/${myId}`).set({
+                team: 'blue',
+            })
+
+            navigate('Game', {
+                gameId: game.id,
+                playerId: myId,
+            })
         })
+    }
+
+    clear() {
+        firebase.database().ref('games').set(null)
     }
 
     render() {
-        const { navigate } = this.props.navigation
         return <View style={{ top: '40%' }}>
             <StatusBar hidden={true}/>
             <Button title="Start" onPress={() => this.startGame()}/>
-            <Button title="Join" onPress={() => navigate('Game')}/>
+            <Button title="Join" onPress={() => this.joinGame()}/>
+            <Button title="Clear" onPress={() => this.clear()}/>
         </View>
     }
 }

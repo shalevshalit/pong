@@ -56,7 +56,7 @@ export default class GameScreen extends React.Component {
 
     renderOtherButtons() {
         return _.map(this.state.players, (val, key) => {
-            if (key !== this.state.playerId) {
+            if (key !== this.state.playerId && val.left) {
                 return <View style={styles.button1}>
                     <View style={{
                         backgroundColor: val.team,
