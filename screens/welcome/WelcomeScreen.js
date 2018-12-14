@@ -31,8 +31,10 @@ export default class WelcomeScreen extends React.Component {
             const myId = guid()
             const allGames = snapshot.val()
             const game = _.last(_.sortBy(allGames, 'time'))
+            const teams = _.countBy(_.values(game.players), 'team');
+
             firebase.database().ref(`games/${game.id}/players/${myId}`).set({
-                team: 'blue',
+                team: teams.red > (teams.blue || 0) ? 'blue' : 'red',
             })
 
             navigate('Game', {
