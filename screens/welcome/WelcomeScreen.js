@@ -19,7 +19,7 @@ export default class WelcomeScreen extends React.Component {
             players,
         })
 
-        navigate('Game', {
+        navigate('StartGame', {
             gameId: myId,
             playerId: myId,
         })
@@ -51,7 +51,7 @@ export default class WelcomeScreen extends React.Component {
     render() {
         return <View style={{ top: '40%' }}>
             <StatusBar hidden={true}/>
-            <Button title="Start" onPress={() => this.startGame()}/>
+            <Button title="Host" onPress={() => this.startGame()}/>
             <Button title="Join" onPress={() => this.joinGame()}/>
             <Button title="Clear" onPress={() => this.clear()}/>
         </View>
