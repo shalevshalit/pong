@@ -1,5 +1,5 @@
 import React from 'react'
-import { Button, Dimensions, StyleSheet, View } from 'react-native'
+import { Button, StyleSheet, View } from 'react-native'
 import * as firebase from 'firebase'
 import * as _ from 'lodash'
 
@@ -9,19 +9,12 @@ export default class GameScreen extends React.Component {
         const { navigation } = this.props;
         const gameId = navigation.getParam('gameId');
         const playerId = navigation.getParam('playerId');
-        const { width } = Dimensions.get('window')
-
-        let left = width * 0.5 - width * 0.1
-
-        firebase.database().ref(`games/${gameId}/players/${playerId}/left`).set(left);
 
         this.state = {
             gameId,
             playerId,
             players: {
-                [playerId]: {
-                    left
-                }
+                [playerId]: {}
             }
         }
     }
