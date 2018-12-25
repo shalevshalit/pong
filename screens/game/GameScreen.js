@@ -1,21 +1,24 @@
 import React from 'react'
-import { Button, StyleSheet, View, Dimensions } from 'react-native'
+import { Button, Dimensions, StyleSheet, View } from 'react-native'
 import * as firebase from 'firebase'
 import * as _ from 'lodash'
 
 export default class GameScreen extends React.Component {
     constructor(props) {
         super(props)
-        const { navigation } = this.props;
-        const gameId = navigation.getParam('gameId');
-        const playerId = navigation.getParam('playerId');
+        const { navigation } = this.props
+        const gameId = navigation.getParam('gameId')
+        const playerId = navigation.getParam('playerId')
+        const team = navigation.getParam('team')
 
         this.state = {
             gameId,
             playerId,
             players: {
-                [playerId]: {}
-            }
+                [playerId]: {
+                    team
+                },
+            },
         }
     }
 
@@ -23,37 +26,74 @@ export default class GameScreen extends React.Component {
         firebase.database().ref(`games/${this.state.gameId}/players`).on('value', snapshot => {
             this.setState({ players: snapshot.val() })
         })
-        firebase.database().ref(`games/${this.state.gameId}/ball`).once('value', snapshot => {
-            this.setState({ ball: snapshot.val() })
-            this.moveBall()
+        firebase.database().ref(`games/${this.state.gameId}/ball`).on('value', snapshot => {
+            if (snapshot.val()) {
+                this.setState({ ball: this.getBallProps(snapshot.val()) })
+            }
         })
+        this.moveBall()
+    }
+
+    getBallProps(ball) {
+        const {team} = this.getMyData()
+        const {width, height} = Dimensions.get('window')
+        ball = ball || this.state.ball
+        if (team === 'red') {
+            return ball
+        } else {
+            return {
+                x: width - ball.x,
+                y: height - ball.y,
+                direction: ((Math.PI + ball.direction) % (2 * Math.PI)),
+                speed: ball.speed
+            }
+        }
     }
 
     moveBall() {
         if (this.state.gameEnded) {
             return
         }
-        const ball = this.state.ball
+            const ball = this.state.ball
         if (ball) {
-            let direction = ball.direction;
-            const newY = ball.y + Math.cos(direction) * ball.speed
+            let direction = ball.direction
+            let newY = ball.y + Math.cos(direction) * ball.speed
             let newX = ball.x + Math.sin(direction) * ball.speed
-            const { width } = Dimensions.get('window')
-            if(newX > width - 20) {
-                if(direction > 0.5 * Math.PI) {
+            const { width, height } = Dimensions.get('window')
+            if (newX > width - 20) {
+                if (direction > 0.5 * Math.PI) {
                     direction = direction + (Math.PI - direction) * 2
                 } else {
                     direction = 2 * Math.PI - direction
                 }
                 newX = ball.x + Math.sin(direction) * ball.speed
             }
-            if(newX < 0) {
-                if(direction > 1.5 * Math.PI) {
+            if (newX < 0) {
+                if (direction > 1.5 * Math.PI) {
                     direction = 2 * Math.PI - direction
                 } else {
                     direction = direction + (Math.PI - direction) * 2
                 }
                 newX = ball.x + Math.sin(direction) * ball.speed
+            }
+
+            if (newY > height * 0.9 * 0.90 && newY < height * 0.9 * 0.95) {
+                const { left } = this.getMyData()
+                if (newX > left - 15 && newX < left + 15) {
+                    if (direction > Math.PI) {
+                        direction = direction + (1.5 * Math.PI - direction) * 2
+                    } else {
+                        direction = direction + (0.5 * Math.PI - direction) * 2
+                    }
+                    newY = ball.y + Math.cos(direction) * ball.speed
+
+                    firebase.database().ref(`games/${this.state.gameId}/ball`).set(this.getBallProps({
+                        x: newX,
+                        y: newY,
+                        direction,
+                        speed: ball.speed,
+                    }))
+                }
             }
 
             this.setState({
@@ -66,24 +106,26 @@ export default class GameScreen extends React.Component {
             })
 
         }
-        setTimeout(this.moveBall.bind(this), 100)
+        setTimeout(this.moveBall.bind(this), 10)
     }
 
     getMyData() {
-        return this.state.players[this.state.playerId];
+        return this.state.players[this.state.playerId]
     }
 
     moveButton(px) {
-        const left = this.getMyData().left + px
-        firebase.database().ref(`games/${this.state.gameId}/players/${this.state.playerId}/left`).set(left);
+        const {left: myLeft, team} = this.getMyData()
+        const left = team === 'red' ? myLeft + px : myLeft - px
+        firebase.database().ref(`games/${this.state.gameId}/players/${this.state.playerId}/left`).set(left)
     }
 
     renderMyButton() {
+        const {width} = Dimensions.get('window')
         const val = this.getMyData()
         return <View style={styles.button2}>
             <View style={{
                 backgroundColor: val.team,
-                left: val.left,
+                left: val.team === 'red' ? val.left: (width - val.left),
                 width: 30,
                 position: 'absolute',
                 height: 5,
@@ -92,9 +134,10 @@ export default class GameScreen extends React.Component {
     }
 
     renderOtherButtons() {
+        const {team} = this.getMyData()
         return _.map(this.state.players, (val, key) => {
             if (key !== this.state.playerId && val.left) {
-                return <View key={key} style={val.team === this.getMyData().team ? styles.button2 : styles.button1}>
+                return <View key={key} style={val.team === team ? styles.button2 : styles.button1}>
                     <View style={{
                         backgroundColor: val.team,
                         left: val.left,
@@ -109,7 +152,7 @@ export default class GameScreen extends React.Component {
 
     renderBall() {
         const ball = this.state.ball
-        if(ball) {
+        if (ball) {
             return <View style={{
                 position: 'absolute',
                 backgroundColor: 'black',
@@ -117,7 +160,7 @@ export default class GameScreen extends React.Component {
                 left: ball.x,
                 top: ball.y,
                 width: 20,
-                height: 20
+                height: 20,
             }}>
 
             </View>

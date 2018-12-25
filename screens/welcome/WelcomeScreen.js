@@ -23,6 +23,7 @@ export default class WelcomeScreen extends React.Component {
         navigate('StartGame', {
             gameId: myId,
             playerId: myId,
+            team: 'red'
         })
     }
 
@@ -34,13 +35,15 @@ export default class WelcomeScreen extends React.Component {
             const game = _.last(_.sortBy(_.filter(allGames, {started: false}), 'time'))
             const teams = _.countBy(_.values(game.players), 'team');
 
+            let team = teams.red > (teams.blue || 0) ? 'blue' : 'red'
             firebase.database().ref(`games/${game.id}/players/${myId}`).set({
-                team: teams.red > (teams.blue || 0) ? 'blue' : 'red',
+                team,
             })
 
             navigate('StartGame', {
                 gameId: game.id,
                 playerId: myId,
+                team,
             })
         })
     }
