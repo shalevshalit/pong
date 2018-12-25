@@ -16,6 +16,7 @@ export default class WelcomeScreen extends React.Component {
         firebase.database().ref('games/' + myId).set({
             id: myId,
             time: new Date(),
+            started: false,
             players,
         })
 
@@ -30,14 +31,14 @@ export default class WelcomeScreen extends React.Component {
         firebase.database().ref('games').once('value').then(snapshot => {
             const myId = guid()
             const allGames = snapshot.val()
-            const game = _.last(_.sortBy(allGames, 'time'))
+            const game = _.last(_.sortBy(_.filter(allGames, {started: false}), 'time'))
             const teams = _.countBy(_.values(game.players), 'team');
 
             firebase.database().ref(`games/${game.id}/players/${myId}`).set({
                 team: teams.red > (teams.blue || 0) ? 'blue' : 'red',
             })
 
-            navigate('Game', {
+            navigate('StartGame', {
                 gameId: game.id,
                 playerId: myId,
             })
