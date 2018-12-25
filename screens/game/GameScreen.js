@@ -1,5 +1,5 @@
 import React from 'react'
-import { Button, StyleSheet, View } from 'react-native'
+import { Button, StyleSheet, View, Dimensions } from 'react-native'
 import * as firebase from 'firebase'
 import * as _ from 'lodash'
 
@@ -23,6 +23,50 @@ export default class GameScreen extends React.Component {
         firebase.database().ref(`games/${this.state.gameId}/players`).on('value', snapshot => {
             this.setState({ players: snapshot.val() })
         })
+        firebase.database().ref(`games/${this.state.gameId}/ball`).once('value', snapshot => {
+            this.setState({ ball: snapshot.val() })
+            this.moveBall()
+        })
+    }
+
+    moveBall() {
+        if (this.state.gameEnded) {
+            return
+        }
+        const ball = this.state.ball
+        if (ball) {
+            let direction = ball.direction;
+            const newY = ball.y + Math.cos(direction) * ball.speed
+            let newX = ball.x + Math.sin(direction) * ball.speed
+            const { width } = Dimensions.get('window')
+            if(newX > width - 20) {
+                if(direction > 0.5 * Math.PI) {
+                    direction = direction + (Math.PI - direction) * 2
+                } else {
+                    direction = 2 * Math.PI - direction
+                }
+                newX = ball.x + Math.sin(direction) * ball.speed
+            }
+            if(newX < 0) {
+                if(direction > 1.5 * Math.PI) {
+                    direction = 2 * Math.PI - direction
+                } else {
+                    direction = direction + (Math.PI - direction) * 2
+                }
+                newX = ball.x + Math.sin(direction) * ball.speed
+            }
+
+            this.setState({
+                ball: {
+                    x: newX,
+                    y: newY,
+                    direction,
+                    speed: ball.speed,
+                },
+            })
+
+        }
+        setTimeout(this.moveBall.bind(this), 100)
     }
 
     getMyData() {
@@ -62,10 +106,29 @@ export default class GameScreen extends React.Component {
             }
         })
     }
+
+    renderBall() {
+        const ball = this.state.ball
+        if(ball) {
+            return <View style={{
+                position: 'absolute',
+                backgroundColor: 'black',
+                borderRadius: 50,
+                left: ball.x,
+                top: ball.y,
+                width: 20,
+                height: 20
+            }}>
+
+            </View>
+        }
+    }
+
     render() {
         return (
             <View style={styles.container}>
                 <View style={styles.board}>
+                    {this.renderBall()}
                     {this.renderOtherButtons()}
                     {this.renderMyButton()}
                 </View>

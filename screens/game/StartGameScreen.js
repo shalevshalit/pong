@@ -28,8 +28,15 @@ export default class StartGameScreen extends React.Component {
 
     startGameAfterHostApprval() {
         const { navigate } = this.props.navigation
+        const { width , height} = Dimensions.get('window')
 
-        firebase.database().ref(`games/${this.state.gameId}/started`).set(true);
+        firebase.database().ref(`games/${this.state.gameId}/started`).set(true)
+        firebase.database().ref(`games/${this.state.gameId}/ball`).set({
+            x: 0.5 * width,
+            y: 0.45 * height,
+            direction: _.random(0, 2 * Math.PI, true),
+            speed: 10,
+        })
 
         navigate('Game', {
             gameId: this.state.gameId,
