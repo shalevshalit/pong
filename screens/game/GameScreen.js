@@ -73,7 +73,7 @@ const otherRacket = Matter.Bodies.rectangle(
   GAME_HEIGHT - 50,
   PLANK_WIDTH,
   PLANK_HEIGHT,
-  { ...RACKET_SETTINGS, label: "plankTwo" }
+  { ...RACKET_SETTINGS, label: "racket" }
 )
 
 
@@ -135,12 +135,9 @@ export default class GameOldScreen extends React.PureComponent {
   componentDidMount() {
     firebase.database().ref(`games/${this.state.gameId}/ball`).on('value', snapshot => {
       if (snapshot.val()) {
-        //const { x, y } = snapshot.val()
-        //Matter.Body.setPosition(ball, {
-        //  x: this.layoutService.resizeToWidth(x),
-        //  y: this.layoutService.resizeToHeight(y)
-        //})
-        Matter.Body.setVelocity(ball, { x: 3, y: 3 })
+        const { position, velocity } = snapshot.val()
+        Matter.Body.setPosition(ball, { x: position.x, y: position.y })
+        Matter.Body.setVelocity(ball, { x: velocity.x, y: velocity.y })
       }
     })
 
@@ -164,14 +161,23 @@ export default class GameOldScreen extends React.PureComponent {
           y: GAME_HEIGHT / 2,
         })
       }
+
+      if(objA === 'ball' && objB === 'racket') {
+        firebase.database().ref(`games/${this.state.gameId}/ball`).set({
+          position: {
+            x: ball.position.x,
+            y: ball.position.y,
+          },
+          velocity: {
+            x: ball.velocity.x,
+            y: ball.velocity.y,
+          },
+        })
+      }
     })
   }
 
   render() {
-
-    const { width, height } = Dimensions.get('window')
-
-    console.log(width, height)
     return (
       <GameEngine
         style={styles.container}

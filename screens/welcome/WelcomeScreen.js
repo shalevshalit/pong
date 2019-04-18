@@ -7,7 +7,7 @@ import * as firebase from 'firebase'
 export default class WelcomeScreen extends React.Component {
   startGame() {
     const { navigate } = this.props.navigation
-    const myId = '9f52681b-0001-febd-fe48-06fb834060ef'//guid()
+    const myId = guid() //'9f52681b-0001-febd-fe48-06fb834060ef'//guid()
     const players = {
       [myId]: {
         team: 'red',

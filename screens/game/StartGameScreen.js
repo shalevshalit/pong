@@ -3,10 +3,7 @@ import { Button, Dimensions, StyleSheet, Text, View } from 'react-native'
 import * as firebase from 'firebase'
 import * as _ from 'lodash'
 import { LayoutService } from '../../services/layout-service'
-import {
-  BALL_SIZE, BUTTONS_SIZE, DEFAULT_HEIGHT, DEFAULT_WIDTH,
-  RACKET_WIDTH
-} from '../../services/layout/layout-constants'
+import { BALL_SIZE, BUTTONS_SIZE, DEFAULT_WIDTH, RACKET_WIDTH } from '../../services/layout/layout-constants'
 
 export default class StartGameScreen extends React.Component {
 
@@ -41,10 +38,14 @@ export default class StartGameScreen extends React.Component {
 
     firebase.database().ref(`games/${this.state.gameId}/started`).set(true)
     firebase.database().ref(`games/${this.state.gameId}/ball`).set({
-      x: 0.5 * DEFAULT_WIDTH - BALL_SIZE / 2,
-      y: 0.5 * this.layoutService.heightMinus(BUTTONS_SIZE) - BALL_SIZE / 2,
-      direction: 0,
-      speed: 3,
+      position: {
+        x: 0.5 * DEFAULT_WIDTH - BALL_SIZE / 2,
+        y: 0.5 * this.layoutService.heightMinus(BUTTONS_SIZE) - BALL_SIZE / 2,
+      },
+      velocity: {
+        x: 3,
+        y: 3
+      }
     })
 
     navigate('Game', {

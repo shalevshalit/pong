@@ -1,7 +1,9 @@
 import React from 'react'
-import { StyleSheet, View } from 'react-native'
+import { StyleSheet, View, YellowBox } from 'react-native'
 import AppNavigator from './navigation/AppNavigator'
 import * as firebase from 'firebase'
+
+YellowBox.ignoreWarnings(["Setting a timer"]);
 
 export default class App extends React.Component {
     constructor(props) {
