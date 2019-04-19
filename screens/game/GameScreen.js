@@ -29,14 +29,14 @@ const topWall = Matter.Bodies.rectangle(
   -BORDER * 2,
   GAME_WIDTH,
   BORDER,
-  { ...WALL_SETTINGS, label: "topWall" }
+  { ...WALL_SETTINGS, isSensor: true, label: "topWall" }
 )
 const bottomWall = Matter.Bodies.rectangle(
   GAME_WIDTH / 2,
   GAME_HEIGHT + BORDER * 2,
   GAME_WIDTH,
   BORDER,
-  { ...WALL_SETTINGS, label: "bottomWall" }
+  { ...WALL_SETTINGS, isSensor: true, label: "bottomWall" }
 )
 
 const leftWall = Matter.Bodies.rectangle(
@@ -107,30 +107,23 @@ export default class GameScreen extends React.PureComponent {
 
     setInterval(() => {
       const { position, body } = this.playersService.myPlayer
-      if(position.x !== body.position.x) {
+      if (position.x !== body.position.x) {
         position.x = body.position.x
         firebase.database().ref(`games/${this.playersService.gameId}/players/${this.playersService.playerId}/position`).set(position)
       }
     }, 100)
 
-    firebase.database().ref(`games/${this.gameId}/ball`).on('value', snapshot => {
-      if (snapshot.val()) {
-        const { position, velocity } = snapshot.val()
-        const isRed = this.getMyData().team === 'red'
-        const dup = isRed ? 1 : -1
-        Matter.Sleeping.set(ball, false)
+    firebase.database().ref(`games/${this.playersService.gameId}/ball`).on('value', snapshot => {
+      const { position, velocity } = snapshot.val()
+      const isRed = this.playersService.myPlayer.team === 'red'
+      const dup = isRed ? 1 : -1
 
-        Matter.Body.setPosition(ball, {
-          x: isRed ? position.x : (GAME_WIDTH - position.x),
-          y: isRed ? position.y : (GAME_HEIGHT - position.y)
-        })
-        Matter.Body.setVelocity(ball, { x: dup * velocity.x, y: dup * velocity.y })
-      }
+      Matter.Body.setPosition(ball, {
+        x: position.x,
+        y: isRed ? position.y : (GAME_HEIGHT - position.y)
+      })
+      Matter.Body.setVelocity(ball, { x: velocity.x, y: dup * velocity.y })
     })
-  }
-
-  getMyData() {
-    return this.playersService.myPlayer
   }
 
   componentDidMount() {
@@ -140,43 +133,38 @@ export default class GameScreen extends React.PureComponent {
       const objA = pairs[0].bodyA.label
       const objB = pairs[0].bodyB.label
 
-      if (objA === 'ball' && objB === 'topWall') {
-        Matter.Body.setPosition(ball, {
-          x: GAME_WIDTH / 2 - BALL_SIZE,
-          y: GAME_HEIGHT / 2,
-        })
-        Matter.Body.setVelocity(ball, { x: 3, y: 3 })
-        //this.updateBallPosition()
-      }
-
-
       if (objA === 'ball' && objB === 'bottomWall') {
-        Matter.Body.setPosition(ball, {
-          x: GAME_WIDTH / 2 - BALL_SIZE,
-          y: GAME_HEIGHT / 2,
-        })
-        Matter.Body.setVelocity(ball, { x: 3, y: 3 })
-        //this.updateBallPosition()
+        setTimeout(() => {
+          Matter.Body.setPosition(ball, {
+            x: GAME_WIDTH / 2 - BALL_SIZE,
+            y: GAME_HEIGHT / 2,
+          })
+          Matter.Body.setVelocity(ball, { x: 3, y: 3 })
+          this.updateBallPosition()
+        }, 500)
+
       }
 
       console.log(objA, objB)
-      if (objA === 'ball' && objB === 'racket') {
-        //this.updateBallPosition()
+      if (objA === 'ball' && objB === this.myRacket.label) {
+        setTimeout(() => {
+          this.updateBallPosition()
+        }, 500)
       }
     })
   }
 
   updateBallPosition() {
-    const isRed = this.getMyData().team === 'red'
+    const isRed = this.playersService.myPlayer.team === 'red'
     const dup = isRed ? 1 : -1
 
-    firebase.database().ref(`games/${this.gameId}/ball`).set({
+    firebase.database().ref(`games/${this.playersService.gameId}/ball`).set({
       position: {
-        x: isRed ? ball.position.x : GAME_HEIGHT - ball.position.x,
-        y: isRed ? ball.position.y : GAME_WIDTH - ball.position.y
+        x: ball.position.x,
+        y: isRed ? ball.position.y : GAME_HEIGHT - ball.position.y
       },
       velocity: {
-        x: dup * ball.velocity.x,
+        x: ball.velocity.x,
         y: dup * ball.velocity.y,
       }
     })
