@@ -1,11 +1,6 @@
 import React from "react";
 import { View } from "react-native";
 
-
-export const RACKET_SETTINGS = {
-  isStatic: true
-};
-
 export const Racket = ({ body, size, xAdjustment, yAdjustment, color }) => {
   const width = size[0];
   const height = size[1];

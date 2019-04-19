@@ -5,3 +5,6 @@ export const RACKET_HEIGHT = 5
 export const RACKET_WIDTH = 30
 export const RACKET_FROM_BOTTOM = 40
 export const BUTTONS_SIZE = 80
+
+export const GAME_WIDTH = 340
+export const GAME_HEIGHT = 650

@@ -3,47 +3,45 @@ import React from 'react'
 import { Button, StatusBar, View } from 'react-native'
 import { guid } from '../../utils'
 import * as firebase from 'firebase'
+import PlayersService from '../../services/players'
 
 export default class WelcomeScreen extends React.Component {
   startGame() {
     const { navigate } = this.props.navigation
-    const myId = guid() //'9f52681b-0001-febd-fe48-06fb834060ef'//guid()
-    const players = {
-      [myId]: {
-        team: 'red',
-      }
+    const myId = '9f52681b-0001-febd-fe48-06fb834060ef'//guid()
+    const myPlayer = {
+      id: myId,
+      team: 'red'
     }
+
     firebase.database().ref('games/' + myId).set({
       id: myId,
       time: new Date(),
-      started: false,
-      players,
+      started: false
     })
 
-    navigate('StartGame', {
-      gameId: myId,
-      playerId: myId,
-      team: 'red'
-    })
+    const playersService = new PlayersService(myId, myPlayer)
+
+    navigate('StartGame', { playersService })
   }
 
   joinGame() {
     const { navigate } = this.props.navigation
-    firebase.database().ref('games').once('value').then(snapshot => {
+    firebase.database().ref('games').once('value').then(snapshot => { // TODO games service
       const myId = guid()
       const allGames = snapshot.val()
       const game = _.last(_.sortBy(_.filter(allGames, { started: false }), 'time'))
       const teams = _.countBy(_.values(game.players), 'team')
+      const team = teams.red > (teams.blue || 0) ? 'blue' : 'red'
+      const myPlayer = {
+        id: myId,
+        team
+      }
 
-      let team = teams.red > (teams.blue || 0) ? 'blue' : 'red'
-      firebase.database().ref(`games/${game.id}/players/${myId}`).set({
-        team,
-      })
+      const playersService = new PlayersService(game.id, myPlayer)
 
       navigate('StartGame', {
-        gameId: game.id,
-        playerId: myId,
-        team,
+        playersService,
       })
     })
   }

@@ -2,45 +2,24 @@ import React from 'react'
 import { Button, Dimensions, StyleSheet, Text, View } from 'react-native'
 import * as firebase from 'firebase'
 import * as _ from 'lodash'
-import { LayoutService } from '../../services/layout-service'
-import { BALL_SIZE, BUTTONS_SIZE, DEFAULT_WIDTH, RACKET_WIDTH } from '../../services/layout/layout-constants'
+import { GAME_HEIGHT, GAME_WIDTH } from '../../services/layout/layout-constants'
 
 export default class StartGameScreen extends React.Component {
 
   constructor(props) {
     super(props)
     const { navigation } = this.props
-    const gameId = navigation.getParam('gameId')
-    const playerId = navigation.getParam('playerId')
-    const team = navigation.getParam('team')
-    const { width, height } = Dimensions.get('window')
-
-    this.layoutService = new LayoutService(width, height)
-
-    let left = DEFAULT_WIDTH * 0.5 - RACKET_WIDTH / 2
-
-    firebase.database().ref(`games/${gameId}/players/${playerId}/left`).set(left)
-
-    this.state = {
-      gameId,
-      playerId,
-      players: {
-        [playerId]: {
-          left,
-          team,
-        },
-      },
-    }
+    this.playersService = navigation.getParam('playersService')
   }
 
-  startGameAfterHostApprval() {
+  startGameAfterHostApproval() {
     const { navigate } = this.props.navigation
 
-    firebase.database().ref(`games/${this.state.gameId}/started`).set(true)
-    firebase.database().ref(`games/${this.state.gameId}/ball`).set({
+    firebase.database().ref(`games/${this.playersService.gameId}/started`).set(true)
+    firebase.database().ref(`games/${this.playersService.gameId}/ball`).set({
       position: {
-        x: 0.5 * DEFAULT_WIDTH - BALL_SIZE / 2,
-        y: 0.5 * this.layoutService.heightMinus(BUTTONS_SIZE) - BALL_SIZE / 2,
+        x: 0.5 * GAME_WIDTH,
+        y: 0.5 * GAME_HEIGHT,
       },
       velocity: {
         x: 3,
@@ -49,43 +28,36 @@ export default class StartGameScreen extends React.Component {
     })
 
     navigate('Game', {
-      gameId: this.state.gameId,
-      playerId: this.state.playerId,
-      team: this.getMyData().team,
+      playersService: this.playersService
     })
   }
 
   isHost() {
-    return this.state.gameId === this.state.playerId
+    return this.playersService.gameId === this.playersService.playerId
   }
 
   componentDidMount() {
     const { navigate } = this.props.navigation
     if (!this.isHost()) {
-      firebase.database().ref(`games/${this.state.gameId}/started`).on('value', snapshot => {
+      firebase.database().ref(`games/${this.playersService.gameId}/started`).on('value', snapshot => {
         const started = snapshot.val()
         if (started) {
           navigate('Game', {
-            gameId: this.state.gameId,
-            playerId: this.state.playerId,
-            team: this.getMyData().team,
+            playersService: this.playersService,
           })
         }
       })
     }
-    firebase.database().ref(`games/${this.state.gameId}/players`).on('value', snapshot => {
-      this.setState({ players: snapshot.val() })
-    })
   }
 
   getMyData() {
-    return this.state.players[this.state.playerId]
+    return this.playersService.players[this.playersService.playerId]
   }
 
   moveButton(px) {
     const { left: myLeft, team } = this.getMyData()
     const left = team === 'red' ? myLeft + px : myLeft - px
-    firebase.database().ref(`games/${this.state.gameId}/players/${this.state.playerId}/left`).set(left)
+    firebase.database().ref(`games/${this.playersService.gameId}/players/${this.playersService.playerId}/left`).set(left)
   }
 
   renderMyButton() {
@@ -107,8 +79,8 @@ export default class StartGameScreen extends React.Component {
   renderOtherButtons() {
     const { team } = this.getMyData()
     const { width } = Dimensions.get('window')
-    return _.map(this.state.players, (val, key) => {
-      if (key !== this.state.playerId && val.left) {
+    return _.map(this.playersService.players, (val, key) => {
+      if (key !== this.playersService.playerId && val.left) {
         return <View key={key} style={val.team === team ? styles.button2 : styles.button1}>
           <View
             style={{
@@ -126,7 +98,7 @@ export default class StartGameScreen extends React.Component {
 
   getAction() {
     if (this.isHost())
-      return <Button title="Start Game" onPress={() => this.startGameAfterHostApprval()} />
+      return <Button title="Start Game" onPress={() => this.startGameAfterHostApproval()} />
     else
       return <Text h4>Waiting for other players</Text>
 

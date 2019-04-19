@@ -1,13 +1,12 @@
 import React from 'react'
-import { Dimensions } from 'react-native'
+import * as _ from 'lodash'
 import * as firebase from 'firebase'
-import { LayoutService } from '../../services/layout-service'
 import Matter from "matter-js"
 import { GameEngine } from "react-native-game-engine"
-import { BALL_SIZE } from '../../services/layout/layout-constants'
+import { BALL_SIZE, RACKET_WIDTH } from '../../services/layout/layout-constants'
 import { Ball, BALL_SETTINGS } from './components/Ball'
 import { Wall, WALL_SETTINGS } from './components/Wall'
-import { Racket, RACKET_SETTINGS } from './components/Racket'
+import { Racket } from './components/Racket'
 
 const GAME_WIDTH = 340
 const GAME_HEIGHT = 650
@@ -27,7 +26,7 @@ const ball = Matter.Bodies.circle(
 
 const topWall = Matter.Bodies.rectangle(
   GAME_WIDTH / 2,
-  - BORDER * 2,
+  -BORDER * 2,
   GAME_WIDTH,
   BORDER,
   { ...WALL_SETTINGS, label: "topWall" }
@@ -58,25 +57,6 @@ const rightWall = Matter.Bodies.rectangle(
   { ...WALL_SETTINGS, label: "rightWall" }
 )
 
-const yourRacket = Matter.Bodies.rectangle(
-  95,
-  BORDER,
-  PLANK_WIDTH,
-  PLANK_HEIGHT,
-  {
-    ...RACKET_SETTINGS,
-    label: "plankOne"
-  }
-)
-const otherRacket = Matter.Bodies.rectangle(
-  95,
-  GAME_HEIGHT - 50,
-  PLANK_WIDTH,
-  PLANK_HEIGHT,
-  { ...RACKET_SETTINGS, label: "racket" }
-)
-
-
 const engine = Matter.Engine.create({ enableSleeping: false })
 const world = engine.world
 
@@ -85,21 +65,14 @@ Matter.World.add(world, [
   topWall,
   bottomWall,
   rightWall,
-  leftWall,
-  otherRacket,
-  yourRacket
+  leftWall
 ])
 
-export default class GameOldScreen extends React.PureComponent {
+export default class GameScreen extends React.PureComponent {
   constructor(props) {
     super(props)
     const { navigation } = this.props
-    const gameId = navigation.getParam('gameId')
-    const playerId = navigation.getParam('playerId')
-    const team = navigation.getParam('team')
-    const { width, height } = Dimensions.get('window')
-
-    this.layoutService = new LayoutService(width, height)
+    this.playersService = navigation.getParam('playersService')
 
     this.physics = (entities, { time }) => {
       let engine = entities["physics"].engine
@@ -108,39 +81,59 @@ export default class GameOldScreen extends React.PureComponent {
       return entities
     }
 
+    this.myRacket = this.playersService.myPlayer.body
+
+    Matter.World.add(world, _.map(this.playersService.players, p => p.body))
+
     this.movePlank = (entities, { touches }) => {
       let move = touches.find(x => x.type === "move")
       if (move) {
+        let xPosition = this.myRacket.position.x + move.delta.pageX
+        if (xPosition < RACKET_WIDTH) {
+          xPosition = RACKET_WIDTH
+        }
+        if (xPosition > GAME_WIDTH - RACKET_WIDTH) {
+          xPosition = GAME_WIDTH - RACKET_WIDTH
+        }
         const newPosition = {
-          x: otherRacket.position.x + move.delta.pageX,
-          y: otherRacket.position.y
-        };
-        Matter.Body.setPosition(otherRacket, newPosition);
+          x: xPosition,
+          y: this.myRacket.position.y
+        }
+        Matter.Body.setPosition(this.myRacket, newPosition)
       }
 
       return entities
     }
 
-    this.state = {
-      gameId,
-      playerId,
-      players: {
-        [playerId]: {
-          team
-        },
-      },
-    }
+    setInterval(() => {
+      const { position, body } = this.playersService.myPlayer
+      if(position.x !== body.position.x) {
+        position.x = body.position.x
+        firebase.database().ref(`games/${this.playersService.gameId}/players/${this.playersService.playerId}/position`).set(position)
+      }
+    }, 100)
+
+    firebase.database().ref(`games/${this.gameId}/ball`).on('value', snapshot => {
+      if (snapshot.val()) {
+        const { position, velocity } = snapshot.val()
+        const isRed = this.getMyData().team === 'red'
+        const dup = isRed ? 1 : -1
+        Matter.Sleeping.set(ball, false)
+
+        Matter.Body.setPosition(ball, {
+          x: isRed ? position.x : (GAME_WIDTH - position.x),
+          y: isRed ? position.y : (GAME_HEIGHT - position.y)
+        })
+        Matter.Body.setVelocity(ball, { x: dup * velocity.x, y: dup * velocity.y })
+      }
+    })
+  }
+
+  getMyData() {
+    return this.playersService.myPlayer
   }
 
   componentDidMount() {
-    firebase.database().ref(`games/${this.state.gameId}/ball`).on('value', snapshot => {
-      if (snapshot.val()) {
-        const { position, velocity } = snapshot.val()
-        Matter.Body.setPosition(ball, { x: position.x, y: position.y })
-        Matter.Body.setVelocity(ball, { x: velocity.x, y: velocity.y })
-      }
-    })
-
     Matter.Events.on(engine, "collisionStart", event => {
       const pairs = event.pairs
 
@@ -152,6 +145,8 @@ export default class GameOldScreen extends React.PureComponent {
           x: GAME_WIDTH / 2 - BALL_SIZE,
           y: GAME_HEIGHT / 2,
         })
+        Matter.Body.setVelocity(ball, { x: 3, y: 3 })
+        //this.updateBallPosition()
       }
 
 
@@ -160,82 +155,88 @@ export default class GameOldScreen extends React.PureComponent {
           x: GAME_WIDTH / 2 - BALL_SIZE,
           y: GAME_HEIGHT / 2,
         })
+        Matter.Body.setVelocity(ball, { x: 3, y: 3 })
+        //this.updateBallPosition()
       }
 
-      if(objA === 'ball' && objB === 'racket') {
-        firebase.database().ref(`games/${this.state.gameId}/ball`).set({
-          position: {
-            x: ball.position.x,
-            y: ball.position.y,
-          },
-          velocity: {
-            x: ball.velocity.x,
-            y: ball.velocity.y,
-          },
-        })
+      console.log(objA, objB)
+      if (objA === 'ball' && objB === 'racket') {
+        //this.updateBallPosition()
+      }
+    })
+  }
+
+  updateBallPosition() {
+    const isRed = this.getMyData().team === 'red'
+    const dup = isRed ? 1 : -1
+
+    firebase.database().ref(`games/${this.gameId}/ball`).set({
+      position: {
+        x: isRed ? ball.position.x : GAME_HEIGHT - ball.position.x,
+        y: isRed ? ball.position.y : GAME_WIDTH - ball.position.y
+      },
+      velocity: {
+        x: dup * ball.velocity.x,
+        y: dup * ball.velocity.y,
       }
     })
   }
 
   render() {
+    const playersEntities = _.mapValues(this.playersService.players, player => {
+      return {
+        body: player.body,
+        size: [PLANK_WIDTH, PLANK_HEIGHT],
+        color: player.team,
+        renderer: Racket,
+      }
+    })
+
+    const entities = {
+      physics: {
+        engine: engine,
+        world: world
+      },
+      ball: {
+        body: ball,
+        size: [BALL_SIZE, BALL_SIZE],
+        renderer: Ball
+      },
+      topWall: {
+        body: topWall,
+        size: [GAME_WIDTH, 10],
+        color: "#f9941d",
+        renderer: Wall,
+        yAdjustment: -30
+      },
+      bottomWall: {
+        body: bottomWall,
+        size: [GAME_WIDTH, 10],
+        color: "#f9941d",
+        renderer: Wall,
+        yAdjustment: 58
+      },
+      leftWall: {
+        body: leftWall,
+        size: [5, GAME_HEIGHT],
+        color: "#333",
+        renderer: Wall,
+        xAdjustment: 0
+      },
+      rightWall: {
+        body: rightWall,
+        size: [5, GAME_HEIGHT],
+        color: "#333",
+        renderer: Wall,
+        xAdjustment: 0
+      },
+      ...playersEntities
+    }
     return (
       <GameEngine
         style={styles.container}
         systems={[this.physics, this.movePlank]}
-        entities={{
-          physics: {
-            engine: engine,
-            world: world
-          },
-          ball: {
-            body: ball,
-            size: [BALL_SIZE, BALL_SIZE],
-            renderer: Ball
-          },
-          topWall: {
-            body: topWall,
-            size: [GAME_WIDTH, 10],
-            color: "#f9941d",
-            renderer: Wall,
-            yAdjustment: -30
-          },
-          bottomWall: {
-            body: bottomWall,
-            size: [GAME_WIDTH, 10],
-            color: "#f9941d",
-            renderer: Wall,
-            yAdjustment: 58
-          },
-          leftWall: {
-            body: leftWall,
-            size: [5, GAME_HEIGHT],
-            color: "#333",
-            renderer: Wall,
-            xAdjustment: 0
-          },
-          rightWall: {
-            body: rightWall,
-            size: [5, GAME_HEIGHT],
-            color: "#333",
-            renderer: Wall,
-            xAdjustment: 0
-          },
-          playerOnePlank: {
-            body: yourRacket,
-            size: [PLANK_WIDTH, PLANK_HEIGHT],
-            color: "#a6e22c",
-            renderer: Racket,
-            xAdjustment: 30
-          },
-          playerTwoPlank: {
-            body: otherRacket,
-            size: [PLANK_WIDTH, PLANK_HEIGHT],
-            color: "#7198e6",
-            renderer: Racket,
-            type: "rightPlank",
-            xAdjustment: -33
-          },
-        }}
+        entities={entities}
       >
       </GameEngine>
     )
@@ -246,7 +247,7 @@ const styles = {
   container: {
     width: GAME_WIDTH,
     height: GAME_HEIGHT,
-    backgroundColor: "#00F",
+    backgroundColor: "#ddd",
     alignSelf: "center"
   }
 }
