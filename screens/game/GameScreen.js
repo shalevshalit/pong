@@ -133,7 +133,7 @@ export default class GameScreen extends React.PureComponent {
       const objA = pairs[0].bodyA.label
       const objB = pairs[0].bodyB.label
 
-      if (objA === 'ball' && objB === 'bottomWall') {
+      if (objA === 'ball' && (objB === 'bottomWall' || objB === 'topWall') && this.playersService.isHost()) {
         setTimeout(() => {
           Matter.Body.setPosition(ball, {
             x: GAME_WIDTH / 2 - BALL_SIZE,
@@ -157,6 +157,11 @@ export default class GameScreen extends React.PureComponent {
   updateBallPosition() {
     const isRed = this.playersService.myPlayer.team === 'red'
     const dup = isRed ? 1 : -1
+    let velocity = ball.velocity.y
+
+    if(Math.abs(velocity) < 1) {
+      velocity = velocity + Math.sign(velocity)
+    }
 
     firebase.database().ref(`games/${this.playersService.gameId}/ball`).set({
       position: {
@@ -165,7 +170,7 @@ export default class GameScreen extends React.PureComponent {
       },
       velocity: {
         x: ball.velocity.x,
-        y: dup * ball.velocity.y,
+        y: dup * velocity,
       }
     })
   }

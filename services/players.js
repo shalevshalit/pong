@@ -88,6 +88,10 @@ class PlayersService {
   get myPlayer() {
     return this.players[this.playerId]
   }
+
+  isHost() {
+    return this.playerId === this.gameId
+  }
 }
 
 export default PlayersService
