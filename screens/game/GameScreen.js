@@ -86,7 +86,7 @@ export default class GameScreen extends React.PureComponent {
     Matter.World.add(world, _.map(this.playersService.players, p => p.body))
 
     this.movePlank = (entities, { touches }) => {
-      let move = touches.find(x => x.type === "move")
+      const move = touches.find(x => x.type === "move")
       if (move) {
         let xPosition = this.myRacket.position.x + move.delta.pageX
         if (xPosition < RACKET_WIDTH) {
@@ -100,6 +100,13 @@ export default class GameScreen extends React.PureComponent {
           y: this.myRacket.position.y
         }
         Matter.Body.setPosition(this.myRacket, newPosition)
+      }
+      const press = touches.find(x => x.type === "press")
+      if (press) {
+        Matter.Body.translate(this.myRacket, { x: 0, y: -30 })
+        setTimeout(() => {
+          Matter.Body.translate(this.myRacket, { x: 0, y: 30 })
+        }, 100)
       }
 
       return entities
@@ -159,7 +166,7 @@ export default class GameScreen extends React.PureComponent {
     const dup = isRed ? 1 : -1
     let velocity = ball.velocity.y
 
-    if(Math.abs(velocity) < 1) {
+    if (Math.abs(velocity) < 1) {
       velocity = velocity + Math.sign(velocity)
     }
 
