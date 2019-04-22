@@ -7,6 +7,7 @@ import { BALL_SIZE, RACKET_WIDTH } from '../../services/layout/layout-constants'
 import { Ball, BALL_SETTINGS } from './components/Ball'
 import { Wall, WALL_SETTINGS } from './components/Wall'
 import { Racket } from './components/Racket'
+import { View, Text } from "react-native";
 
 const GAME_WIDTH = 340
 const GAME_HEIGHT = 650
@@ -238,6 +239,16 @@ export default class GameScreen extends React.PureComponent {
         systems={[this.physics, this.movePlank]}
         entities={entities}
       >
+        <View style={styles.scoresContainer}>
+          <View style={styles.score}>
+            <Text style={styles.scoreLabelBlue}>{'Blue'}</Text>
+            <Text style={styles.scoreValue}> {5}</Text>
+          </View>
+          <View style={styles.score}>
+            <Text style={styles.scoreLabelRed}>{'Red'}</Text>
+            <Text style={styles.scoreValue}> {5}</Text>
+          </View>
+        </View>
       </GameEngine>
     )
   }
@@ -249,5 +260,31 @@ const styles = {
     height: GAME_HEIGHT,
     backgroundColor: "#ddd",
     alignSelf: "center"
+  },
+  scoresContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  score: {
+    flexDirection: "row",
+    flex: 1
+  },
+  scoreLabel: {
+    color: 'rgba(0,0,0,0.5)',
+    fontSize: 30
+  },
+  scoreLabelRed: {
+    color: 'rgba(200,0,0,0.5)',
+    fontSize: 30
+  },
+  scoreLabelBlue: {
+    color: 'rgba(0,0,200,0.5)',
+    fontSize: 30
+  },
+  scoreValue: {
+    color: 'rgba(0,0,0,0.5)',
+    fontSize: 30,
+    fontWeight: "bold"
   }
 }
