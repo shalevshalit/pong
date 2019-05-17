@@ -7,6 +7,7 @@ import * as firebase from 'firebase'
 Player {
   id: guid
   team: red|blue
+  goals: number,
   position: {
     x: number
     y: number
@@ -56,6 +57,7 @@ class PlayersService {
       id,
       team,
       position,
+      goals: 0,
       body,
     }
 
@@ -67,8 +69,12 @@ class PlayersService {
       })
     } else {
       firebase.database().ref(
-        `games/${this.gameId}/players/${id}/position`).on('value',
-        snapshot => this.onPlayerPositionChange(id, snapshot.val())
+        `games/${this.gameId}/players/${id}`).on('value',
+        snapshot => {
+          const {position, goals} = snapshot.val()
+          this.players[id].goals = goals
+          this.onPlayerPositionChange(id, position)
+        }
       )
     }
   }

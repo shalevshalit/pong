@@ -17,6 +17,14 @@ export default class StartGameScreen extends React.Component {
 
     firebase.database().ref(`games/${this.playersService.gameId}/started`).set(true)
     firebase.database().ref(`games/${this.playersService.gameId}/ball`).set({
+      last: {
+        red: 0,
+        blue: 0
+      },
+      score: {
+        red: 0,
+        blue: 0
+      },
       position: {
         x: 0.5 * GAME_WIDTH,
         y: 0.5 * GAME_HEIGHT,
