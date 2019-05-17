@@ -1,28 +1,42 @@
 import * as _ from 'lodash'
 import React from 'react'
-import { Button, StatusBar, View } from 'react-native'
+import { Animated, StatusBar, Text, View } from 'react-native'
 import { guid } from '../../utils'
 import * as firebase from 'firebase'
 import PlayersService from '../../services/players'
+import AwesomeButton from 'react-native-really-awesome-button/src/themes/blue';
 
 export default class WelcomeScreen extends React.Component {
+
+  constructor(props) {
+    super(props)
+    this.hostOpacity = new Animated.Value(1)
+  }
+
   startGame() {
-    const { navigate } = this.props.navigation
-    const myId = guid()//'9f52681b-0001-febd-fe48-06fb834060ef'//guid()
-    const myPlayer = {
-      id: myId,
-      team: 'red'
-    }
+    Animated.timing(
+      this.hostOpacity,
+      {
+        toValue: 0,
+      },
+    ).start(() => {
+      const { navigate } = this.props.navigation
+      const myId = guid()//'9f52681b-0001-febd-fe48-06fb834060ef'//guid()
+      const myPlayer = {
+        id: myId,
+        team: 'red'
+      }
 
-    firebase.database().ref('games/' + myId).set({
-      id: myId,
-      time: new Date(),
-      started: false
+      firebase.database().ref('games/' + myId).set({
+        id: myId,
+        time: new Date(),
+        started: false
+      })
+
+      const playersService = new PlayersService(myId, myPlayer)
+
+      navigate('StartGame', { playersService })
     })
-
-    const playersService = new PlayersService(myId, myPlayer)
-
-    navigate('StartGame', { playersService })
   }
 
   joinGame() {
@@ -51,11 +65,48 @@ export default class WelcomeScreen extends React.Component {
   }
 
   render() {
-    return <View style={{ top: '40%' }}>
+    return <View style={styles.background}>
       <StatusBar hidden={true} />
-      <Button title="Host" onPress={() => this.startGame()} />
-      <Button title="Join" onPress={() => this.joinGame()} />
-      <Button title="Clear" onPress={() => this.clear()} />
+      <View><Text style={styles.title}>PONG</Text></View>
+      <AwesomeButton
+        progress
+        type="primary"
+        size="medium"
+        style={styles.button}
+        onPress={next => {
+        this.startGame()
+        next()
+      }}>Host</AwesomeButton>
+      <AwesomeButton
+        progress
+        type="secondary"
+        size="medium"
+        style={styles.button}
+        onPress={next => {
+        this.joinGame()
+        next()
+      }} >Join</AwesomeButton>
     </View>
+  }
+}
+
+const styles = {
+  background: {
+    backgroundColor: '#000',
+    height: '100%',
+    width: '100%',
+  },
+  title: {
+    fontSize: 60,
+    textAlign: 'center',
+    fontFamily: 'monospace',
+    fontWeight: "bold",
+    marginTop: 150,
+    marginBottom: 60,
+    color: '#13FB13'
+  },
+  button: {
+    alignSelf: 'center',
+    margin: 15
   }
 }
