@@ -9,6 +9,8 @@ import { Wall, WALL_SETTINGS } from './components/Wall'
 import { Racket } from './components/Racket'
 import { StyleSheet, Text, View } from "react-native"
 
+const WIN_SCORE = 3
+
 const GAME_WIDTH = 340
 const GAME_HEIGHT = 650
 const PLANK_HEIGHT = 20
@@ -140,8 +142,9 @@ export default class GameScreen extends React.PureComponent {
         this.setState({ redScore: score.red })
       }
       if (score && this.state.blueScore !== score.blue) {
-        this.setState({ blueScore: score.red })
+        this.setState({ blueScore: score.blue })
       }
+      this.exitIfDone()
     })
     const ballPositionRef = this.ballRef.child('position')
     ballPositionRef.on('value', snapshot => {
@@ -187,12 +190,16 @@ export default class GameScreen extends React.PureComponent {
       const objA = pairs[0].bodyA.label
       const objB = pairs[0].bodyB.label
 
-      if (objA === 'ball' && (objB === 'bottomWall' || objB === 'topWall') && this.playersService.isHost()) {
+      if (objA === 'ball' && (objB === 'bottomWall' || objB === 'topWall') && this.playersService.isHost() && !this.isDone()) {
         if (!isUpdatingScore) {
           isUpdatingScore = true
           const scoredTeam = objB === 'bottomWall' ? oppositeTeam[team] : team
           const { last, score } = this
           score[scoredTeam] = score[scoredTeam] + 1
+          if (last[scoredTeam]) {
+            firebase.database().ref(`games/${this.playersService.gameId}/players/${last[scoredTeam]}/goals`).set((this.playersService.players[last[scoredTeam]].goals || 0) + 1)
+            this.playersService.players[last[scoredTeam]].goals = (this.playersService.players[last[scoredTeam]].goals || 0) + 1
+          }
           firebase.database().ref(`games/${this.playersService.gameId}/ball/score/${scoredTeam}`).set(score[scoredTeam])
           firebase.database().ref(`games/${this.playersService.gameId}/ball/last`).set({
             red: 0,
@@ -200,9 +207,7 @@ export default class GameScreen extends React.PureComponent {
           })
 
           this.setState({redScore: score['red'], blueScore: score['blue']})
-          if (last[scoredTeam] > 0) {
-            firebase.database().ref(`games/${this.playersService.gameId}/players/${last[scoredTeam]}/goals`).set((this.playersService.players[last[scoredTeam]].goals || 0) + 1)
-          }
+          this.exitIfDone()
 
           setTimeout(() => {
             Matter.Body.setPosition(ball, {
@@ -216,8 +221,11 @@ export default class GameScreen extends React.PureComponent {
         }
       }
 
+      console.log(objA, objB)
       if (objA === 'ball' && objB === this.myRacket.label) {
-        firebase.database().ref(`games/${this.playersService.gameId}/ball/last/${team}`).set(this.playersService.myPlayer.id)
+        console.log('touched', `games/${this.playersService.gameId}/ball/last/${team}`, this.playersService.playerId)
+        firebase.database().ref(`games/${this.playersService.gameId}/ball/last/${team}`).set(this.playersService.playerId)
+        this.last[this.playersService.myPlayer.team] = this.playersService.playerId
         setTimeout(() => {
           this.updateBallPosition()
         }, 500)
@@ -246,12 +254,31 @@ export default class GameScreen extends React.PureComponent {
     })
   }
 
+  isDone(){
+    return this.score.red >= WIN_SCORE || this.score.blue >= WIN_SCORE
+  }
+
+  exitIfDone() {
+    if (this.isDone()) {
+      const { navigate } = this.props.navigation
+
+      navigate('EndGame', {
+        playersService: this.playersService,
+        score: this.score
+      })
+    }
+  }
+
   render() {
     const playersEntities = _.mapValues(this.playersService.players, player => {
+      const color = player.id === this.playersService.playerId ?
+        (player.team === 'red' ? '#e8282e' : '#283aff') :
+        (player.team === 'red' ? '#e85b5e' : '#6161ff')
+
       return {
         body: player.body,
         size: [PLANK_WIDTH, PLANK_HEIGHT],
-        color: player.id === this.playersService.playerId ? 'green' : player.team,
+        color: color,
         playerColor: player.uniqueColor,
         renderer: Racket,
       }

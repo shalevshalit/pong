@@ -1,61 +1,24 @@
 import React from 'react'
-import { StyleSheet, Text, View } from 'react-native'
+import { Button, StyleSheet, Text, View } from 'react-native'
 import * as firebase from 'firebase'
-import { GAME_HEIGHT, GAME_WIDTH } from '../../services/layout/layout-constants'
 import AwesomeButton from 'react-native-really-awesome-button/src/themes/blue';
 
-export default class StartGameScreen extends React.Component {
-
+export default class EndGameScreen extends React.Component {
   constructor(props) {
     super(props)
     const { navigation } = this.props
     this.playersService = navigation.getParam('playersService')
+    this.score = navigation.getParam('score')
   }
 
   startGameAfterHostApproval() {
     const { navigate } = this.props.navigation
 
-    firebase.database().ref(`games/${this.playersService.gameId}/started`).set(true)
-    firebase.database().ref(`games/${this.playersService.gameId}/ball`).set({
-      last: {
-        red: 0,
-        blue: 0
-      },
-      score: {
-        red: 0,
-        blue: 0
-      },
-      position: {
-        x: 0.5 * GAME_WIDTH,
-        y: 0.5 * GAME_HEIGHT,
-      },
-      velocity: {
-        x: 3,
-        y: 3
-      }
-    })
-
-    navigate('Game', {
-      playersService: this.playersService
-    })
+    navigate('Welcome')
   }
 
   isHost() {
     return this.playersService.gameId === this.playersService.playerId
-  }
-
-  componentDidMount() {
-    const { navigate } = this.props.navigation
-    if (!this.isHost()) {
-      firebase.database().ref(`games/${this.playersService.gameId}/started`).on('value', snapshot => {
-        const started = snapshot.val()
-        if (started) {
-          navigate('Game', {
-            playersService: this.playersService,
-          })
-        }
-      })
-    }
   }
 
   getPlayersByTeam(team) {
@@ -69,31 +32,34 @@ export default class StartGameScreen extends React.Component {
 
     return <View key={player.id} style={{...styles.playerBullet, backgroundColor: color}}>
       <View style={{width: 10, height: 10, borderRadius: 50, top: 5, left: 5, position: 'absolute', backgroundColor: player.uniqueColor}} />
-      <Text style={styles.scoreValue}>{player.name}</Text>
+      <Text style={styles.playerName}>{player.name}</Text>
+      <Text style={styles.playerName}>({player.goals})</Text>
     </View>
   }
 
   render() {
     return <View style={styles.background}>
       <View><Text style={styles.title}>PONG</Text></View>
-      {this.isHost() ? <AwesomeButton
+      {<AwesomeButton
         progress
-        type="primary"
+        type="secondary"
         size="medium"
         style={styles.button}
         onPress={next => {
           this.startGameAfterHostApproval()
           next()
-        }}>Start Game</AwesomeButton> : <Text style={styles.waiting}>Waiting for other players</Text>}
+        }}>Play Again</AwesomeButton>}
       <View style={styles.scoresContainer}>
         <View style={styles.score}>
           <Text style={styles.scoreLabelBlue}>{'Blue'}</Text>
+          <Text style={styles.scoreValue}> {this.score.blue}</Text>
           {
             this.getPlayersByTeam('blue').map(this.renderPlayer.bind(this))
           }
         </View>
         <View style={styles.score}>
           <Text style={styles.scoreLabelRed}>{'Red'}</Text>
+          <Text style={styles.scoreValue}> {this.score.red}</Text>
           {
             this.getPlayersByTeam('red').map(this.renderPlayer.bind(this))
           }
@@ -148,7 +114,7 @@ const styles = StyleSheet.create({
     fontSize: 30,
     textAlign: 'center'
   },
-  scoreValue: {
+  playerName: {
     color: '#000000',
     fontSize: 15,
     fontWeight: "bold",
@@ -159,7 +125,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffa',
     borderRadius: 12,
     margin: 10,
-    width: GAME_WIDTH / 2 - 8,
+    width: '50%',
     alignSelf: 'center'
+  },
+  scoreValue: {
+    color: '#fff',
+    fontSize: 30,
+    fontWeight: "bold",
+    textAlign: 'center'
   }
 })

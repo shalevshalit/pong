@@ -10,7 +10,6 @@ export default class WelcomeScreen extends React.Component {
 
   constructor(props) {
     super(props)
-    this.startGame() // TODO remove
   }
 
   startGame() {
