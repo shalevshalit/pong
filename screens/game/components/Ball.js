@@ -20,7 +20,7 @@ export const Ball = ({ body }) => {
 
 const styles = {
   ball: {
-    backgroundColor: "#143615",
+    backgroundColor: "#2dff44",
     width: BALL_SIZE,
     height: BALL_SIZE,
     position: "absolute",

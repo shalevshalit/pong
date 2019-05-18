@@ -1,7 +1,6 @@
 import React from 'react'
-import { Button, Dimensions, StyleSheet, Text, View } from 'react-native'
+import { Button, StyleSheet, Text, View } from 'react-native'
 import * as firebase from 'firebase'
-import * as _ from 'lodash'
 import { GAME_HEIGHT, GAME_WIDTH } from '../../services/layout/layout-constants'
 import AwesomeButton from 'react-native-really-awesome-button/src/themes/blue';
 
@@ -11,6 +10,7 @@ export default class StartGameScreen extends React.Component {
     super(props)
     const { navigation } = this.props
     this.playersService = navigation.getParam('playersService')
+    this.startGameAfterHostApproval() // TODO remove
   }
 
   startGameAfterHostApproval() {
@@ -88,6 +88,7 @@ export default class StartGameScreen extends React.Component {
       (player.team === 'red' ? '#e85b5e' : '#6161ff')
 
     return <View key={player.id} style={{...styles.playerBullet, backgroundColor: color}}>
+      <View style={{width: 10, height: 10, borderRadius: 50, top: 5, left: 5, position: 'absolute', backgroundColor: player.uniqueColor}} />
       <Text style={styles.scoreValue}>{player.name}</Text>
     </View>
   }
@@ -174,6 +175,7 @@ const styles = StyleSheet.create({
     textAlign: 'center'
   },
   playerBullet: {
+    paddingLeft: 5,
     backgroundColor: '#ffa',
     borderRadius: 12,
     margin: 10,

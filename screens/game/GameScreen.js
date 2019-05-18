@@ -7,7 +7,7 @@ import { BALL_SIZE, RACKET_WIDTH } from '../../services/layout/layout-constants'
 import { Ball, BALL_SETTINGS } from './components/Ball'
 import { Wall, WALL_SETTINGS } from './components/Wall'
 import { Racket } from './components/Racket'
-import { Text, View } from "react-native"
+import { StyleSheet, Text, View } from "react-native"
 
 const GAME_WIDTH = 340
 const GAME_HEIGHT = 650
@@ -42,7 +42,7 @@ const bottomWall = Matter.Bodies.rectangle(
 
 const leftWall = Matter.Bodies.rectangle(
   0,
-  GAME_HEIGHT / 2,
+  GAME_HEIGHT / 2 - 25,
   BORDER,
   GAME_HEIGHT,
   {
@@ -52,7 +52,7 @@ const leftWall = Matter.Bodies.rectangle(
 )
 const rightWall = Matter.Bodies.rectangle(
   GAME_WIDTH,
-  GAME_HEIGHT / 2,
+  GAME_HEIGHT / 2 - 25,
   BORDER,
   GAME_HEIGHT,
   { ...WALL_SETTINGS, label: "rightWall" }
@@ -126,7 +126,13 @@ export default class GameScreen extends React.PureComponent {
       }
     }, 100)
 
-    firebase.database().ref(`games/${this.playersService.gameId}/ball`).on('value', snapshot => {
+
+  }
+
+
+  componentWillMount() {
+    this.ballRef = firebase.database().ref(`games/${this.playersService.gameId}/ball`)
+    this.ballRef.on('value', snapshot => {
       const { last, score } = snapshot.val()
       this.last = last
       this.score = score
@@ -136,28 +142,39 @@ export default class GameScreen extends React.PureComponent {
       if (score && this.state.blueScore !== score.blue) {
         this.setState({ blueScore: score.red })
       }
-
     })
-    firebase.database().ref(`games/${this.playersService.gameId}/ball/position`).on('value', snapshot => {
+    const ballPositionRef = this.ballRef.child('position')
+    ballPositionRef.on('value', snapshot => {
       const position = snapshot.val()
       const isRed = this.playersService.myPlayer.team === 'red'
-      const dup = isRed ? 1 : -1
 
       Matter.Body.setPosition(ball, {
         x: position.x,
         y: isRed ? position.y : (GAME_HEIGHT - position.y)
       })
     })
-    firebase.database().ref(`games/${this.playersService.gameId}/ball/velocity`).on('value', snapshot => {
+
+    const ballVelocityRef = this.ballRef.child('velocity')
+    ballVelocityRef.on('value', snapshot => {
       const velocity = snapshot.val()
       const isRed = this.playersService.myPlayer.team === 'red'
       const dup = isRed ? 1 : -1
 
       Matter.Body.setVelocity(ball, { x: velocity.x, y: dup * velocity.y })
     })
+
+    this.manageCollision();
   }
 
-  componentDidMount() {
+
+  componentWillUnmount() {
+    this.ballRef.off('value')
+    this.ballRef.child('position').off('value')
+    this.ballRef.child('velocity').off('value')
+    Matter.Events.off(engine, "collisionStart")
+  }
+
+  manageCollision() {
     const oppositeTeam = {
       red: 'blue',
       blue: 'red'
@@ -175,11 +192,14 @@ export default class GameScreen extends React.PureComponent {
           isUpdatingScore = true
           const scoredTeam = objB === 'bottomWall' ? oppositeTeam[team] : team
           const { last, score } = this
-          firebase.database().ref(`games/${this.playersService.gameId}/ball/score/${scoredTeam}`).set(score[scoredTeam] + 1)
+          score[scoredTeam] = score[scoredTeam] + 1
+          firebase.database().ref(`games/${this.playersService.gameId}/ball/score/${scoredTeam}`).set(score[scoredTeam])
           firebase.database().ref(`games/${this.playersService.gameId}/ball/last`).set({
             red: 0,
             blue: 0
           })
+
+          this.setState({redScore: score['red'], blueScore: score['blue']})
           if (last[scoredTeam] > 0) {
             firebase.database().ref(`games/${this.playersService.gameId}/players/${last[scoredTeam]}/goals`).set((this.playersService.players[last[scoredTeam]].goals || 0) + 1)
           }
@@ -192,11 +212,10 @@ export default class GameScreen extends React.PureComponent {
             Matter.Body.setVelocity(ball, { x: 3, y: 3 })
             this.updateBallPosition()
             isUpdatingScore = false
-          }, 500)
+          }, 400)
         }
       }
 
-      console.log(objA, objB)
       if (objA === 'ball' && objB === this.myRacket.label) {
         firebase.database().ref(`games/${this.playersService.gameId}/ball/last/${team}`).set(this.playersService.myPlayer.id)
         setTimeout(() => {
@@ -232,7 +251,8 @@ export default class GameScreen extends React.PureComponent {
       return {
         body: player.body,
         size: [PLANK_WIDTH, PLANK_HEIGHT],
-        color: player.team,
+        color: player.id === this.playersService.playerId ? 'green' : player.team,
+        playerColor: player.uniqueColor,
         renderer: Racket,
       }
     })
@@ -278,31 +298,37 @@ export default class GameScreen extends React.PureComponent {
       ...playersEntities
     }
     return (
-      <GameEngine
-        style={styles.container}
-        systems={[this.physics, this.movePlank]}
-        entities={entities}
-      >
-        <View style={styles.scoresContainer}>
-          <View style={styles.score}>
-            <Text style={styles.scoreLabelBlue}>{'Blue'}</Text>
-            <Text style={styles.scoreValue}> {this.state.blueScore}</Text>
+      <View style={styles.screen}>
+        <GameEngine
+          style={styles.container}
+          systems={[this.physics, this.movePlank]}
+          entities={entities}
+        >
+          <View style={styles.scoresContainer}>
+            <View style={styles.score}>
+              <Text style={styles.scoreLabelBlue}>{'Blue'}</Text>
+              <Text style={styles.scoreValue}> {this.state.blueScore}</Text>
+            </View>
+            <View style={styles.score}>
+              <Text style={styles.scoreLabelRed}>{'Red'}</Text>
+              <Text style={styles.scoreValue}> {this.state.redScore}</Text>
+            </View>
           </View>
-          <View style={styles.score}>
-            <Text style={styles.scoreLabelRed}>{'Red'}</Text>
-            <Text style={styles.scoreValue}> {this.state.redScore}</Text>
-          </View>
-        </View>
-      </GameEngine>
+        </GameEngine>
+      </View>
     )
   }
 }
 
 const styles = {
+  screen: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: '#000'
+  },
   container: {
     width: GAME_WIDTH,
     height: GAME_HEIGHT,
-    backgroundColor: "#ddd",
+    backgroundColor: "#000",
     alignSelf: "center"
   },
   scoresContainer: {
@@ -318,17 +344,17 @@ const styles = {
     width: '50%'
   },
   scoreLabelRed: {
-    color: 'rgba(200,0,0,0.5)',
+    color: 'rgba(200,0,0,0.9)',
     fontSize: 30,
     textAlign: 'center'
   },
   scoreLabelBlue: {
-    color: 'rgba(0,0,200,0.5)',
+    color: 'rgba(0,0,200,0.9)',
     fontSize: 30,
     textAlign: 'center'
   },
   scoreValue: {
-    color: 'rgba(0,0,0,0.5)',
+    color: '#fff',
     fontSize: 30,
     fontWeight: "bold",
     textAlign: 'center'

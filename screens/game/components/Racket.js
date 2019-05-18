@@ -1,7 +1,7 @@
 import React from "react";
 import { View } from "react-native";
 
-export const Racket = ({ body, size, xAdjustment, yAdjustment, color }) => {
+export const Racket = ({ body, size, xAdjustment, yAdjustment, playerColor, color }) => {
   const width = size[0];
   const height = size[1];
   const xAdjust = xAdjustment ? xAdjustment : 0;
@@ -14,6 +14,10 @@ export const Racket = ({ body, size, xAdjustment, yAdjustment, color }) => {
     <View
       style={{
         position: "absolute",
+        borderTopColor: playerColor,
+        borderTopWidth: 4,
+        borderTopLeftRadius: 8,
+        borderTopRightRadius: 8,
         left: x,
         top: y,
         width: width,
