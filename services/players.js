@@ -2,12 +2,17 @@ import * as _ from 'lodash'
 import { GAME_HEIGHT, GAME_WIDTH, RACKET_FROM_BOTTOM, RACKET_HEIGHT, RACKET_WIDTH } from './layout/layout-constants'
 import Matter from "matter-js"
 import * as firebase from 'firebase'
+import Chance from 'chance'
+const chance = new Chance()
+const COLORS = ["Amber", "Azure", "Black", "Blue", "Bronze", "Brown", "Champagne", "Chocolate", "Coffee", "Copper", "Coral", "Cyan", "Gold", "Gray", "Green", "Magenta", "Orange", "Pink", "Purple", "Red", "Rose", "Ruby", "Silver", "Teal", "Violet", "White", "Yellow"]
+
 
 /*
 Player {
   id: guid
   team: red|blue
-  goals: number,
+  goals: number
+  name: string
   position: {
     x: number
     y: number
@@ -52,10 +57,12 @@ class PlayersService {
         label: `player-${id}`
       }
     )
+    const name = `${chance.pickone(COLORS)} ${chance.animal()}`
 
     this.players[id] = {
       id,
       team,
+      name,
       position,
       goals: 0,
       body,

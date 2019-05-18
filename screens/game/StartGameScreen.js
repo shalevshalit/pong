@@ -3,6 +3,7 @@ import { Button, Dimensions, StyleSheet, Text, View } from 'react-native'
 import * as firebase from 'firebase'
 import * as _ from 'lodash'
 import { GAME_HEIGHT, GAME_WIDTH } from '../../services/layout/layout-constants'
+import AwesomeButton from 'react-native-really-awesome-button/src/themes/blue';
 
 export default class StartGameScreen extends React.Component {
 
@@ -68,41 +69,6 @@ export default class StartGameScreen extends React.Component {
     firebase.database().ref(`games/${this.playersService.gameId}/players/${this.playersService.playerId}/left`).set(left)
   }
 
-  renderMyButton() {
-    const { width } = Dimensions.get('window')
-    const val = this.getMyData()
-    return <View style={styles.button2}>
-      <View
-        style={{
-          backgroundColor: val.team,
-          left: val.team === 'red' ? val.left : (width - val.left),
-          width: 30,
-          position: 'absolute',
-          height: 5,
-        }}
-      />
-    </View>
-  }
-
-  renderOtherButtons() {
-    const { team } = this.getMyData()
-    const { width } = Dimensions.get('window')
-    return _.map(this.playersService.players, (val, key) => {
-      if (key !== this.playersService.playerId && val.left) {
-        return <View key={key} style={val.team === team ? styles.button2 : styles.button1}>
-          <View
-            style={{
-              backgroundColor: val.team,
-              left: team === 'red' ? val.left : (width - val.left),
-              width: 30,
-              position: 'absolute',
-              height: 5,
-            }}
-          />
-        </View>
-      }
-    })
-  }
 
   getAction() {
     if (this.isHost())
@@ -112,85 +78,106 @@ export default class StartGameScreen extends React.Component {
 
   }
 
-  renderStartGameButton() {
-    return <View
-      style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        height: '90%',
-        justifyContent: 'center',
-        alignItems: 'center',
-        zIndex: 9,
-      }}
-    >
-      {this.getAction()}
+  getPlayersByTeam(team) {
+    return Object.values(this.playersService.players).filter(player => player.team === team)
+  }
+
+  renderPlayer(player) {
+    const color = player.id === this.playersService.playerId ?
+      (player.team === 'red' ? '#e8282e' : '#283aff') :
+      (player.team === 'red' ? '#e85b5e' : '#6161ff')
+
+    return <View key={player.id} style={{...styles.playerBullet, backgroundColor: color}}>
+      <Text style={styles.scoreValue}>{player.name}</Text>
     </View>
   }
 
   render() {
-    return (
-      <View style={{ height: '100%', width: '100%' }}>
-        {this.renderStartGameButton()}
-        <View style={styles.container}>
-          <View style={styles.board}>
-            {this.renderOtherButtons()}
-            {this.renderMyButton()}
-          </View>
-
-          <View
-            style={{
-              display: 'flex',
-              flexDirection: 'row',
-              flex: 1,
-              backgroundColor: '#000',
-              width: '100%',
-              height: 30,
-            }}
-          >
-            <View style={{ flex: 1, height: 30 }}>
-              <Button
-                style={{ width: '100%', height: '100%' }} title="👈"
-                onPress={() => this.moveButton(-15)}
-              />
-            </View>
-            <View style={{ flex: 1, height: 30 }}>
-              <Button
-                style={{ width: '100%', height: '100%' }} title="👉"
-                onPress={() => this.moveButton(15)}
-              />
-            </View>
-          </View>
+    return <View style={styles.background}>
+      <View><Text style={styles.title}>PONG</Text></View>
+      {this.isHost() ? <AwesomeButton
+        progress
+        type="primary"
+        size="medium"
+        style={styles.button}
+        onPress={next => {
+          this.startGameAfterHostApproval()
+          next()
+        }}>Start Game</AwesomeButton> : <Text style={styles.waiting}>Waiting for other players</Text>}
+      <View style={styles.scoresContainer}>
+        <View style={styles.score}>
+          <Text style={styles.scoreLabelBlue}>{'Blue'}</Text>
+          {
+            this.getPlayersByTeam('blue').map(this.renderPlayer.bind(this))
+          }
+        </View>
+        <View style={styles.score}>
+          <Text style={styles.scoreLabelRed}>{'Red'}</Text>
+          {
+            this.getPlayersByTeam('red').map(this.renderPlayer.bind(this))
+          }
         </View>
       </View>
-    )
+    </View>
   }
 }
 
 const styles = StyleSheet.create({
-  container: {
-    display: 'flex',
+  background: {
+    backgroundColor: '#000',
+    height: '100%',
+    width: '100%',
+  },
+  title: {
+    fontSize: 60,
+    textAlign: 'center',
+    fontFamily: 'monospace',
+    fontWeight: 'bold',
+    marginTop: 150,
+    marginBottom: 60,
+    color: '#13FB13'
+  },
+  waiting: {
+    color: '#fff',
+    margin: 15,
+    fontSize: 30,
+    textAlign: 'center'
+  },
+  button: {
+    alignSelf: 'center',
+    margin: 15
+  },
+  scoresContainer: {
     flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  board: {
-    height: '90%',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
     width: '100%',
-    position: 'relative',
-    backgroundColor: '#fff',
+    height: 150
   },
-  button1: {
-    position: 'absolute',
-    top: '5%',
-    width: '100%',
-    height: '3%',
+  score: {
+    width: '50%'
   },
-  button2: {
-    position: 'absolute',
-    bottom: '5%',
-    width: '100%',
-    height: '3%',
+  scoreLabelRed: {
+    color: '#f00',
+    fontSize: 30,
+    textAlign: 'center'
   },
+  scoreLabelBlue: {
+    color: '#00f',
+    fontSize: 30,
+    textAlign: 'center'
+  },
+  scoreValue: {
+    color: '#000000',
+    fontSize: 15,
+    fontWeight: "bold",
+    textAlign: 'center'
+  },
+  playerBullet: {
+    backgroundColor: '#ffa',
+    borderRadius: 12,
+    margin: 10,
+    width: GAME_WIDTH / 2,
+    alignSelf: 'center'
+  }
 })

@@ -1,42 +1,34 @@
 import * as _ from 'lodash'
 import React from 'react'
-import { Animated, StatusBar, Text, View } from 'react-native'
+import { StatusBar, Text, View } from 'react-native'
 import { guid } from '../../utils'
 import * as firebase from 'firebase'
 import PlayersService from '../../services/players'
-import AwesomeButton from 'react-native-really-awesome-button/src/themes/blue';
+import AwesomeButton from 'react-native-really-awesome-button/src/themes/blue'
 
 export default class WelcomeScreen extends React.Component {
 
   constructor(props) {
     super(props)
-    this.hostOpacity = new Animated.Value(1)
   }
 
   startGame() {
-    Animated.timing(
-      this.hostOpacity,
-      {
-        toValue: 0,
-      },
-    ).start(() => {
-      const { navigate } = this.props.navigation
-      const myId = guid()//'9f52681b-0001-febd-fe48-06fb834060ef'//guid()
-      const myPlayer = {
-        id: myId,
-        team: 'red'
-      }
+    const { navigate } = this.props.navigation
+    const myId = guid()
+    const myPlayer = {
+      id: myId,
+      team: 'red'
+    }
 
-      firebase.database().ref('games/' + myId).set({
-        id: myId,
-        time: new Date(),
-        started: false
-      })
-
-      const playersService = new PlayersService(myId, myPlayer)
-
-      navigate('StartGame', { playersService })
+    firebase.database().ref('games/' + myId).set({
+      id: myId,
+      time: new Date(),
+      started: false
     })
+
+    const playersService = new PlayersService(myId, myPlayer)
+
+    navigate('StartGame', { playersService })
   }
 
   joinGame() {
@@ -58,10 +50,6 @@ export default class WelcomeScreen extends React.Component {
         playersService,
       })
     })
-  }
-
-  clear() {
-    firebase.database().ref('games').set(null)
   }
 
   render() {

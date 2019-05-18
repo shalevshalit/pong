@@ -9,6 +9,7 @@
     "eject": "expo eject"
   },
   "dependencies": {
+    "chance": "^1.0.18",
     "expo": "^31.0.2",
     "firebase": "^5.7.0",
     "lodash": "^4.17.11",
