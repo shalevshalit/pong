@@ -1,4 +1,4 @@
-# Multiplater Online PONG Mobile Game
+# Multiplayer Online PONG Mobile Game
 
 [![Pong](https://img.shields.io/badge/awesome%3F-yeah!-blue.svg)]()
 
