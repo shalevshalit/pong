@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "chance": "^1.0.18",
-    "expo": "^31.0.2",
+    "expo": "^46.0.14",
     "firebase": "^5.7.0",
     "lodash": "^4.17.11",
     "matter-js": "^0.14.2",
